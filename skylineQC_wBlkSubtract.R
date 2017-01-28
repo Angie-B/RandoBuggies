@@ -8,9 +8,9 @@ library("plyr")
 library("reshape2")
 
 ## Set the parameters for the QC ----------------------------------------
-setwd("M:/Summer_2016_metabolites/Diel_1_Samples/")
+setwd("C:/Users/Angela/Google Drive/AOA_SUP05")
 
-filename <- "Copy of Diel_1_HILIC_A_160627_smps_d4Taurine1.csv"
+filename <- "HILIC_SUP05_AOA.csv"
 areas.raw <- read.csv(filename ,header=TRUE, comment.char="", as.is=TRUE)
 masterfile <- "HILIC_MasterList_Summer2016.csv"
 master <- read.csv(masterfile)
