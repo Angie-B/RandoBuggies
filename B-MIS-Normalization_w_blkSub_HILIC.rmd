@@ -165,12 +165,12 @@ aq.detect <- mydata_new %>%
      group_by(Compound.Name) %>%
      summarise(percent.aq.blksub = sum(!is.na(Area.BlkSub))/num,
                percent.aq.raw = sum(!is.na(Area))/num)
-# write.csv(aq.detect,"in.HILIC.aq.diel.both.csv")
+# write.csv(aq.detect,"in.HILIC.aq.AOA.SUP05.csv")
 ```
 
 ```{r combine}
-measured.tqs <- aq.detect %>% filter(percent.aq.blksub>0.25)%>%
-     filter(percent.aq.raw>11/num)
+measured.tqs <- aq.detect %>% filter(percent.aq.blksub>0.15)%>%
+     filter(percent.aq.raw>0)
 
 means.aq <- mydata_new %>%
      filter(!grepl("Blk",Replicate.Name)) %>%  
@@ -197,90 +197,59 @@ Output of this section is a dataframe aq.data.backfilled
 that should have Updated values in the Area.BlkSub COlumn
 and an added note if the data was 'backfilled'
 ```{r aq.backfill}
-##select data that has no blank ratio
-unfilled.BlkRatio <- aq.data.sub %>% 
-     select(runDate, type, SampID, replicate, Compound.Name, 
-            BlkRatio) %>% 
-     spread(Compound.Name, BlkRatio) %>% 
-     filter(type == "Smp")%>%
-     gather(Compound.Name, BlkRatio, -SampID, -runDate,
-            -replicate, -type) %>%
-     filter(!grepl(paste(IS.aq.list, collapse="|"), 
-                       Compound.Name)) %>%
-     filter(is.na(BlkRatio)) %>%
-     mutate(newArea = NA, Replicate.Name = NA)
-
-## get blank data
-blk.data <- mydata %>%
-     filter(grepl("Blk",Replicate.Name))
-
-for (i in 1:nrow(unfilled.BlkRatio)){
-     blkAreas <- blk.data %>% 
-          filter(Compound.Name == unfilled.BlkRatio$Compound.Name[i],
-                 grepl(unfilled.BlkRatio$runDate[i],Replicate.Name)) %>%
-          select(Area)
-     if(nrow(blkAreas)>0){
-          blkArea <- max(blkAreas)
-     } else {
-          blkAreas <- blk.data %>% 
-          filter(Compound.Name == unfilled.BlkRatio$Compound.Name[i]) %>%
-          select(Area)
-          blkArea <- max(blkAreas)
-     }
-     unfilled.BlkRatio$newArea[i] <- blkArea*0.5
-     unfilled.BlkRatio$BlkRatio[i] <- 1
-     unfilled.BlkRatio$Replicate.Name[i] <- 
-          unfilled.BlkRatio[i,1:4] %>%
-          paste(collapse="_")
-}
-
-aq.data.backfilled <- full_join(aq.data.sub, unfilled.BlkRatio) %>% 
-     mutate(Area.BlkSub = ifelse(!is.na(newArea), 
-                                 newArea, Area.BlkSub)) %>%
-     mutate(Notes = ifelse(!is.na(newArea),
-                           "BackFilled",Notes))
-```
-
-##Import cruise log
-```{r cruiselog, echo=F}
-cruiseLog <- read_csv("Clean Metabolomics Sample Log for SCOPE Cruise_DIEL.csv")
-volData <- cruiseLog %>% select(`Sample ID`, Replicate, Vol, Date) %>%
-     # filter(`Sample ID` > 24) %>%
-     rename(replicate = Replicate, SampID = `Sample ID`) %>%
-     mutate(SampID = as.character(SampID), 
-            replicate = as.character(replicate))
-```
-
-##Merge data and vol data
-and then correct area for volume filtered.
-new.data is a dataframe with the column Area.norm that has
-the updated blank subtracted values normalized to water volume.
-```{r aq.areaCorrect}
-new.data <- full_join(aq.data.backfilled, volData)
-new.data <- new.data %>% 
-     mutate(Vol = ifelse(type=="Blk",3.5,
-                         ifelse(type=="Poo", 3.5, Vol)))
-new.data <- new.data %>% 
-     mutate(Area.norm = ifelse(
-          test = grepl(paste(IS.aq.list, collapse="|"), Compound.Name),
-                               yes = Area/Vol,
-                               no = Area.BlkSub/Vol))
-```
-
-##remove 21-24 since they don't have the right extraction standards
-Running this will depend on your samples!
-```{r aq, eval = F}
-new.data.2 <- new.data %>%
-     filter(SampID!="21",SampID!="22",SampID!="23",SampID!="24",
-            SampID!="AqExtracts0713")
-# new.data.2 <- new.data
+# ##select data that has no blank ratio
+# unfilled.BlkRatio <- aq.data.sub %>% 
+#      select(runDate, type, SampID, replicate, Compound.Name, 
+#             BlkRatio) %>% 
+#      spread(Compound.Name, BlkRatio) %>% 
+#      filter(type == "Smp")%>%
+#      gather(Compound.Name, BlkRatio, -SampID, -runDate,
+#             -replicate, -type) %>%
+#      filter(!grepl(paste(IS.aq.list, collapse="|"), 
+#                        Compound.Name)) %>%
+#      filter(is.na(BlkRatio)) %>%
+#      mutate(newArea = NA, Replicate.Name = NA)
+# 
+# ## get blank data
+# blk.data <- mydata %>%
+#      filter(grepl("Blk",Replicate.Name))
+# 
+# for (i in 1:nrow(unfilled.BlkRatio)){
+#      blkAreas <- blk.data %>% 
+#           filter(Compound.Name == unfilled.BlkRatio$Compound.Name[i],
+#                  grepl(unfilled.BlkRatio$runDate[i],Replicate.Name)) %>%
+#           select(Area)
+#      if(nrow(blkAreas)>0){
+#           blkArea <- max(blkAreas)
+#      } else {
+#           blkAreas <- blk.data %>% 
+#           filter(Compound.Name == unfilled.BlkRatio$Compound.Name[i]) %>%
+#           select(Area)
+#           blkArea <- max(blkAreas)
+#      }
+#      unfilled.BlkRatio$newArea[i] <- blkArea*0.5
+#      unfilled.BlkRatio$BlkRatio[i] <- 1
+#      unfilled.BlkRatio$Replicate.Name[i] <- 
+#           unfilled.BlkRatio[i,1:4] %>%
+#           paste(collapse="_")
+# }
+# 
+# aq.data.backfilled <- full_join(aq.data.sub, unfilled.BlkRatio) %>% 
+#      mutate(Area.BlkSub = ifelse(!is.na(newArea), 
+#                                  newArea, Area.BlkSub)) %>%
+#      mutate(Notes = ifelse(!is.na(newArea),
+#                            "BackFilled",Notes))
+new.data.2 <- aq.data.sub    
 ```
 
 ##Calculate mean values for each IS
+##USING JUST AREAS NOT BLANK SUB
 ```{r ISmeans}
+
+
 IS.aq.dat <- new.data.2[grepl(paste(IS.aq.list, collapse="|"),
                             new.data.2$Compound.Name),] %>% 
-     select(Compound.Name, Area.norm, Replicate.Name) %>%
+     select(Compound.Name, Area, Replicate.Name) %>%
      filter(!grepl("Blk",Replicate.Name)) %>%
      filter(!grepl("Poo",Replicate.Name)) 
 IS.aq.means <- IS.aq.dat %>% 
